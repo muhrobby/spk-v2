@@ -105,12 +105,28 @@ _Deploy your own copy with one click._
     npm install
    ```
 
-4. **Start the development server**
+4. **Setup environment variables**
+    ```bash
+    cp .env.example .env
+    ```
+    Then edit `.env` and fill in the required values:
+    - `DATABASE_URL`: MySQL connection string (e.g., `mysql://user:password@localhost:3306/spk`)
+    - `BETTER_AUTH_SECRET`: Generate with `openssl rand -hex 32`
+    - `BETTER_AUTH_URL`: Your application base URL (e.g., `http://localhost:3000`)
+
+5. **Start the development server**
    ```bash
    npm run dev
    ```
 
 Your app will be running at [http://localhost:3000](http://localhost:3000)
+
+#### Database Setup (First Time)
+For local development with MySQL in Docker:
+```bash
+docker run --name spk-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=spk -p 3306:3306 -d mysql:8.0
+```
+Then set `DATABASE_URL=mysql://root:password@localhost:3306/spk` in your `.env` file.
 
 ### Formatting and Linting
 
