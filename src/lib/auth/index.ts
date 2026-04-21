@@ -1,10 +1,7 @@
-/**
- * BetterAuth configuration file
- * This file will be extended with:
- * - Auth instance setup
- * - Strategy configuration (email/password)
- * - Database adapter setup
- */
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+
+import { db, schema } from "@/db";
 
 export function getAuthSecret(): string {
   const secret = process.env.BETTER_AUTH_SECRET;
@@ -38,4 +35,15 @@ export function validateAuthConfig(): void {
   }
 }
 
-// TODO: Initialize BetterAuth instance here in Task 4
+export const auth = betterAuth({
+  baseURL: getAuthUrl(),
+  secret: getAuthSecret(),
+  database: drizzleAdapter(db, {
+    provider: "mysql",
+    schema,
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  disabledPaths: ["/sign-up/email"],
+});

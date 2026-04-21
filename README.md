@@ -114,7 +114,22 @@ _Deploy your own copy with one click._
     - `BETTER_AUTH_SECRET`: Generate with `openssl rand -hex 32`
     - `BETTER_AUTH_URL`: Your application base URL (e.g., `http://localhost:3000`)
 
-5. **Start the development server**
+5. **Generate and apply database migration**
+   ```bash
+   npm run db:generate
+   npm run db:migrate
+   ```
+
+6. **Seed default criteria weights (C1/C2/C3)**
+   ```bash
+   npm run db:seed
+   ```
+   Expected default rows in `criteria_weights`:
+   - `C1` (benefit): bobot `40`
+   - `C2` (benefit): bobot `30`
+   - `C3` (cost): bobot `30`
+
+7. **Start the development server**
    ```bash
    npm run dev
    ```

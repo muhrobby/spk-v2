@@ -1,11 +1,17 @@
-/**
- * Database entry point
- * This file will be extended with:
- * - Drizzle database client initialization
- * - Connection pooling configuration
- * - Query helpers and utilities
- */
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+
+import { getDatabaseUrl } from "./config";
+import * as schema from "./schema";
 
 export * from "./config";
+export * from "./schema";
 
-// TODO: Add drizzle client initialization here in Task 2
+const pool = mysql.createPool({
+  uri: getDatabaseUrl(),
+  connectionLimit: 10,
+});
+
+export const db = drizzle(pool, { schema, mode: "default" });
+
+export { pool, schema };
