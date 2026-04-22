@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
+import { SendRankingEmailDialog } from "./_components/send-ranking-email-dialog";
 import { SpkRankingTable } from "./_components/spk-ranking-table";
 
 type DashboardPageProps = {
@@ -31,15 +32,19 @@ export default async function Page({ searchParams }: DashboardPageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form className="flex flex-wrap items-end gap-3" method="get">
-            <div className="space-y-1.5">
-              <label htmlFor="periode" className="font-medium text-sm">
-                Periode
-              </label>
-              <Input id="periode" name="periode" type="month" defaultValue={periode} className="w-[180px]" />
-            </div>
-            <Button type="submit">Tampilkan Ranking</Button>
-          </form>
+          <div className="flex flex-wrap items-end gap-3">
+            <form className="flex flex-wrap items-end gap-3" method="get">
+              <div className="space-y-1.5">
+                <label htmlFor="periode" className="font-medium text-sm">
+                  Periode
+                </label>
+                <Input id="periode" name="periode" type="month" defaultValue={periode} className="w-[180px]" />
+              </div>
+              <Button type="submit">Tampilkan Ranking</Button>
+            </form>
+
+            {hasData && <SendRankingEmailDialog periode={periode} rowsCount={rankingResult.rows.length} />}
+          </div>
 
           {periodes.length > 0 && (
             <p className="text-muted-foreground text-xs">
