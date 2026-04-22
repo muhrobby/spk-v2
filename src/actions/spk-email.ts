@@ -20,6 +20,8 @@ export type SendSpkRankingToEmailResult = {
   message: string;
 };
 
+type AuthSession = Awaited<ReturnType<typeof getAuthSession>>;
+
 type N8nResponseBody = {
   success?: unknown;
   message?: unknown;
@@ -48,24 +50,57 @@ type N8nRankingPayload = {
   };
 };
 
-type SessionLike = {
-  user?: {
-    id?: unknown;
-    email?: unknown;
-  };
-  session?: {
-    userId?: unknown;
-  };
-};
-
-function getWebhookUrl(): string | null {
+function getWebhookConfig(): { url: string | null; errorMessage: string | null } {
   const value = process.env.N8N_RANKING_WEBHOOK_URL;
   if (!value) {
-    return null;
+    return { url: null, errorMessage: null };
   }
 
   const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  if (trimmed.length === 0) {
+    return { url: null, errorMessage: null };
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return {
+        url: null,
+        errorMessage: "Konfigurasi webhook harus memakai URL http atau https yang valid.",
+      };
+    }
+
+    return { url: parsed.toString(), errorMessage: null };
+  } catch {
+    return {
+      url: null,
+      errorMessage: "Konfigurasi webhook harus berupa URL absolut yang valid.",
+    };
+  }
+}
+
+function getRequestedBy(session: AuthSession): { userId: string | null; email: string | null } {
+  if (!session || typeof session !== "object") {
+    return { userId: null, email: null };
+  }
+
+  const user = "user" in session ? session.user : undefined;
+  const sessionUserId =
+    "userId" in session && typeof session.userId === "string"
+      ? session.userId
+      : "session" in session && session.session && typeof session.session.userId === "string"
+        ? session.session.userId
+        : null;
+
+  const userId =
+    user && typeof user === "object" && "id" in user && typeof user.id === "string" ? user.id : sessionUserId;
+  const email =
+    user && typeof user === "object" && "email" in user && typeof user.email === "string" ? user.email : null;
+
+  return {
+    userId,
+    email,
+  };
 }
 
 function readResponseMessage(body: unknown): string | null {
@@ -95,18 +130,6 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
-function toRequestedBy(session: SessionLike) {
-  const sessionUserId = session.session?.userId;
-  const userId = typeof sessionUserId === "string" || typeof sessionUserId === "number" ? String(sessionUserId) : null;
-
-  const email = typeof session.user?.email === "string" ? session.user.email : null;
-
-  return {
-    userId,
-    email,
-  };
-}
-
 export async function sendSpkRankingToEmail(input: SendSpkRankingToEmailInput): Promise<SendSpkRankingToEmailResult> {
   const session = await getAuthSession();
   if (!session) {
@@ -124,8 +147,15 @@ export async function sendSpkRankingToEmail(input: SendSpkRankingToEmailInput): 
     };
   }
 
-  const webhookUrl = getWebhookUrl();
-  if (!webhookUrl) {
+  const webhookConfig = getWebhookConfig();
+  if (webhookConfig.errorMessage) {
+    return {
+      success: false,
+      message: webhookConfig.errorMessage,
+    };
+  }
+
+  if (!webhookConfig.url) {
     return {
       success: false,
       message: "Konfigurasi webhook belum tersedia. Hubungi admin aplikasi.",
@@ -151,7 +181,7 @@ export async function sendSpkRankingToEmail(input: SendSpkRankingToEmailInput): 
   const payload: N8nRankingPayload = {
     version: "1.0",
     requestedAt: nowIso,
-    requestedBy: toRequestedBy(session as SessionLike),
+    requestedBy: getRequestedBy(session),
     recipientEmail: parsed.data.recipientEmail,
     ranking: {
       periode: rankingResult.periode,
@@ -172,7 +202,7 @@ export async function sendSpkRankingToEmail(input: SendSpkRankingToEmailInput): 
   const timeoutId = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
 
   try {
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(webhookConfig.url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
