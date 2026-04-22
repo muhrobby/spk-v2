@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 
-import { PerformanceForm } from "./_components/performance-form";
+import { PerformanceManualDialog } from "./_components/performance-manual-dialog";
 import { PerformanceUploadDialog } from "./_components/performance-upload-dialog";
 
 export default async function InputKinerjaPage() {
@@ -41,16 +41,14 @@ export default async function InputKinerjaPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle>Form Input Kinerja Bulanan</CardTitle>
-              <CardDescription>Pilih periode, pilih toko, lalu isi metrik kinerja bulanan.</CardDescription>
-            </div>
-            <PerformanceUploadDialog stores={storesList} />
-          </div>
+          <CardTitle>Form Input Kinerja Bulanan</CardTitle>
+          <CardDescription>Pilih metode input data kinerja bulanan yang ingin digunakan.</CardDescription>
         </CardHeader>
         <CardContent>
-          <PerformanceForm stores={storesList} />
+          <div className="flex flex-wrap gap-3">
+            <PerformanceManualDialog stores={storesList} />
+            <PerformanceUploadDialog stores={storesList} />
+          </div>
         </CardContent>
       </Card>
 

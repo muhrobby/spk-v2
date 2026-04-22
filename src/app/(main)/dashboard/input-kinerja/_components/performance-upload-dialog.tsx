@@ -345,13 +345,15 @@ export function PerformanceUploadDialog({ stores }: { stores: StoreOption[] }) {
           {errorSummary.length > 0 && (
             <Alert variant="destructive">
               <AlertCircle className="size-4" />
-              <AlertDescription>
+              <AlertDescription className="min-w-0">
                 <div className="space-y-2">
                   <p className="font-medium">Terdapat error pada data upload:</p>
-                  <ScrollArea className="h-28 rounded border bg-background p-2">
-                    <ul className="space-y-1 text-xs">
+                  <ScrollArea className="h-28 w-full max-w-full rounded border bg-background p-2">
+                    <ul className="space-y-1 whitespace-normal break-words text-xs">
                       {errorSummary.map((item) => (
-                        <li key={item}>{item}</li>
+                        <li key={item} className="whitespace-normal break-words">
+                          {item}
+                        </li>
                       ))}
                     </ul>
                   </ScrollArea>
@@ -400,11 +402,13 @@ export function PerformanceUploadDialog({ stores }: { stores: StoreOption[] }) {
                       <TableCell>{row.totalOrder ?? "-"}</TableCell>
                       <TableCell>{row.incompleteOrder ?? "-"}</TableCell>
                       <TableCell>{row.slaOntime ?? "-"}</TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-80 whitespace-normal align-top">
                         {row.errors.length > 0 ? (
-                          <ul className="list-disc space-y-0.5 pl-4 text-destructive text-xs">
+                          <ul className="list-disc space-y-0.5 whitespace-normal break-words pl-4 text-destructive text-xs">
                             {row.errors.map((error) => (
-                              <li key={`${row.rowNumber}-${error}`}>{error}</li>
+                              <li key={`${row.rowNumber}-${error}`} className="whitespace-normal break-words">
+                                {error}
+                              </li>
                             ))}
                           </ul>
                         ) : (

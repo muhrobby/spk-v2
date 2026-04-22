@@ -24,9 +24,10 @@ interface PerformanceFormProps {
     id: number;
     namaToko: string;
   }>;
+  onSuccess?: () => void;
 }
 
-export function PerformanceForm({ stores }: PerformanceFormProps) {
+export function PerformanceForm({ stores, onSuccess }: PerformanceFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -83,6 +84,7 @@ export function PerformanceForm({ stores }: PerformanceFormProps) {
       incompleteOrder: 0,
       slaOntime: 0,
     });
+    onSuccess?.();
     router.refresh();
   };
 
