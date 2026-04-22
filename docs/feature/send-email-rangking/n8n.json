@@ -1,0 +1,285 @@
+{
+  "name": "SPK - Send Ranking Email (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-ranking-email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "12f5ad8f-0b78-4c95-8fc5-3133ce70c0b1",
+      "name": "Webhook Send Ranking",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const input = $input.first()?.json ?? {};\nconst payload = input.body ?? input;\n\nfunction fail(message) {\n  return [{ json: { isValid: false, errorMessage: message } }];\n}\n\nif (typeof payload !== 'object' || payload === null) {\n  return fail('Payload request tidak valid.');\n}\n\nconst recipientEmail = typeof payload.recipientEmail === 'string' ? payload.recipientEmail.trim() : '';\nconst periode = typeof payload?.ranking?.periode === 'string' ? payload.ranking.periode.trim() : '';\nconst rows = Array.isArray(payload?.ranking?.rows) ? payload.ranking.rows : [];\n\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (!recipientEmail || !emailRegex.test(recipientEmail)) {\n  return fail('Alamat email tujuan tidak valid.');\n}\n\nif (!periode) {\n  return fail('Periode ranking tidak valid.');\n}\n\nif (rows.length === 0) {\n  return fail('Tidak ada data ranking untuk dikirim.');\n}\n\nconst normalizedRows = rows.map((row, index) => ({\n  peringkat: Number(row?.peringkat ?? index + 1),\n  storeId: Number(row?.storeId ?? 0),\n  namaToko: String(row?.namaToko ?? ''),\n  skorC1: Number(row?.skorC1 ?? 0),\n  skorC2: Number(row?.skorC2 ?? 0),\n  skorC3: Number(row?.skorC3 ?? 0),\n  nilaiAkhir: Number(row?.nilaiAkhir ?? 0)\n}));\n\nreturn [\n  {\n    json: {\n      isValid: true,\n      recipientEmail,\n      periode,\n      rows: normalizedRows,\n      requestedByEmail: typeof payload?.requestedBy?.email === 'string' ? payload.requestedBy.email : '',\n      requestedAt: typeof payload?.requestedAt === 'string' ? payload.requestedAt : new Date().toISOString(),\n      rowsCount: normalizedRows.length\n    }\n  }\n];"
+      },
+      "id": "f1bc93e9-5f93-4265-b032-e9f9bbec149e",
+      "name": "Validate & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.isValid}}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "8b6f3a06-acbf-4da4-becd-99f60f60bb7b",
+      "name": "Payload Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"message\": $json.errorMessage || \"Payload tidak valid.\" } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "ff0ce994-5095-49ec-b098-7f5f8d5f0f5e",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        980,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const payload = $input.first()?.json ?? {};\nconst rows = Array.isArray(payload.rows) ? payload.rows : [];\n\nreturn rows.map((row) => ({\n  json: {\n    peringkat: row.peringkat,\n    storeId: row.storeId,\n    namaToko: row.namaToko,\n    skorC1: row.skorC1,\n    skorC2: row.skorC2,\n    skorC3: row.skorC3,\n    nilaiAkhir: row.nilaiAkhir\n  }\n}));"
+      },
+      "id": "e696b3b4-6ae3-4d75-b31a-6219f707f040",
+      "name": "Expand Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "binaryPropertyName": "rankingCsv",
+        "options": {
+          "delimiter": ",",
+          "fileName": "=ranking-spk-{{$('Validate & Prepare').first().json.periode}}.csv",
+          "headerRow": true
+        }
+      },
+      "id": "c295ad2b-041d-4f0b-bdb8-346fae5890b9",
+      "name": "Convert Rows to CSV",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1220,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "fromEmail": "no-reply@example.com",
+        "toEmail": "={{ $('Validate & Prepare').first().json.recipientEmail }}",
+        "subject": "=Laporan Ranking SPK Periode {{$('Validate & Prepare').first().json.periode}}",
+        "emailFormat": "text",
+        "text": "=Halo,\\n\\nTerlampir ranking SPK periode {{$('Validate & Prepare').first().json.periode}} dengan total {{$('Validate & Prepare').first().json.rowsCount}} baris.\\n\\nRequest time: {{$('Validate & Prepare').first().json.requestedAt}}\\nRequester: {{$('Validate & Prepare').first().json.requestedByEmail || 'N/A'}}\\n\\nTerima kasih.",
+        "options": {
+          "attachments": "rankingCsv",
+          "appendAttribution": false
+        }
+      },
+      "id": "54ad81e5-7847-4f67-927f-2fd029849e5f",
+      "name": "Send Email (SMTP/Gmail)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1460,
+        180
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error || ''}}",
+              "operation": "isEmpty"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "5ed7c1e4-50a0-4eb8-a9c3-e03cb5e605e0",
+      "name": "Email Sent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Email ranking berhasil dikirim.\" } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f6debe5e-7332-4a8a-9ddb-fd31813a12ba",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1940,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": false, \"message\": \"Gagal mengirim email dari workflow n8n.\" } }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "2fdb40c9-5426-40f0-b742-0417358f80fd",
+      "name": "Respond Send Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1940,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Send Ranking": {
+      "main": [
+        [
+          {
+            "node": "Validate & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Prepare": {
+      "main": [
+        [
+          {
+            "node": "Payload Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payload Valid?": {
+      "main": [
+        [
+          {
+            "node": "Expand Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Rows": {
+      "main": [
+        [
+          {
+            "node": "Convert Rows to CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Rows to CSV": {
+      "main": [
+        [
+          {
+            "node": "Send Email (SMTP/Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (SMTP/Gmail)": {
+      "main": [
+        [
+          {
+            "node": "Email Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Sent?": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Send Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
