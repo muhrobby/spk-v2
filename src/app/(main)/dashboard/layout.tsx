@@ -9,7 +9,6 @@ import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sideb
 import { SimpleIcon } from "@/components/simple-icon";
 import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { users } from "@/data/users";
 import { requireAuthSession } from "@/lib/auth/session";
 import { SIDEBAR_COLLAPSIBLE_VALUES, SIDEBAR_VARIANT_VALUES } from "@/lib/preferences/layout";
 import { cn } from "@/lib/utils";
@@ -20,7 +19,7 @@ import { LayoutControls } from "./_components/sidebar/layout-controls";
 import { ThemeSwitcher } from "./_components/sidebar/theme-switcher";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
-  await requireAuthSession();
+  const session = await requireAuthSession();
 
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
@@ -38,7 +37,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant={variant} collapsible={collapsible} />
+      <AppSidebar variant={variant} collapsible={collapsible} user={session.user} />
       <SidebarInset
         className={cn(
           "[html[data-content-layout=centered]_&>*]:mx-auto",
@@ -72,7 +71,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
                   <SimpleIcon icon={siGithub} className="fill-primary-foreground" />
                 </Link>
               </Button>
-              <AccountSwitcher users={users} />
+              <AccountSwitcher user={session.user} />
             </div>
           </div>
         </header>
